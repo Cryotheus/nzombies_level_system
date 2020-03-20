@@ -342,7 +342,7 @@ else
 		--also it seems that if we define local_player as LocalPlayer() in the init it doesn't work with GetNWInt
 		print("[nZ LS] Local player was invalid! Attempting to obtain the local player...")
 		
-		timer.Create("nz_level_system_local_player_timer", 5.0, 0, function()
+		timer.Create("nz_level_system_local_player_timer", 20.0, 0, function()
 			local_player = LocalPlayer()
 			
 			if local_player then

@@ -1,5 +1,9 @@
 AddCSLuaFile()
 
+resource.AddSingleFile("materials/gui/background.png")
+resource.AddSingleFile("materials/gui/skillicons/jump.png")
+resource.AddSingleFile("materials/gui/skillicons/sprint.png")
+
 --This is mainly just the loader
 --also, this should pretty much always be false
 
