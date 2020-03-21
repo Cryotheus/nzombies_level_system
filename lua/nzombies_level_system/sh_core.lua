@@ -25,6 +25,12 @@ if SERVER then
 	
 	--functions
 	
+	------------------------------------------------------------------------------------------
+	--                                                                                      --
+	-- USING access_pd TO SET VALUES PROBABLY WONT WORK, USE ply_data[ply:UserID()] INSTEAD --
+	--                                                                                      --
+	------------------------------------------------------------------------------------------
+	
 	local function access_pd(ply)
 		--because I'm lazy
 		return ply_data[ply:UserID()]
@@ -59,7 +65,7 @@ if SERVER then
 	
 	local function get_skill_level(ply, skill_name)
 		--returns how many times the skill has been leveled
-		return (access_pd(ply).skills[skill_name] or 0)
+		return access_pd(ply).skills[skill_name] or 0
 	end
 	
 	local function set_exp(ply, amount)
@@ -82,18 +88,20 @@ if SERVER then
 		local old_level = get_skill_level(ply, skill_name)
 		
 		if level ~= old_level then
-			nz_level_system.skills[skill_name].OnLevelChangedPre(ply, old_level, level)
+			local skill = nz_level_system.skills[skill_name]
 			
-			access_pd(ply).skills[skill_name] = level
+			if skill.OnLevelChangedPre then skill.OnLevelChangedPre(ply, old_level, level) end
 			
-			nz_level_system.skills[skill_name].OnLevelChangedPost(ply, old_level, level)
-		else access_pd(ply).skills[skill_name] = level end
+			ply_data[ply:UserID()].skills[skill_name] = level
+			
+			if skill.OnLevelChangedPost then skill.OnLevelChangedPost(ply, old_level, level) end
+		end
 	end
 	
 	--meta functions for modules to interact with
 	--TODO: add docs
 	
-	function ply_meta:AddExperience(amount)
+	function ply_meta:NZLSAddExperience(amount)
 		--this will make the information on the client get updated
 		--print("Used player meta function AddExperience")
 		
@@ -107,68 +115,68 @@ if SERVER then
 		
 		if new_level > current_level then
 			--in case they level up multiple times
-			self:AddPoints(new_level - current_level)
+			self:NZLSAddPoints(new_level - current_level)
 		end
 		
 		set_exp(self, new_exp)
 	end
 	
-	function ply_meta:AddPoints(amount)
+	function ply_meta:NZLSAddPoints(amount)
 		--
 		--print("Used player meta function AddPoints")
 		
 		set_points(self, get_points(self) + amount)
 	end
 	
-	function ply_meta:GetExperience()
+	function ply_meta:NZLSGetExperience()
 		--
 		--print("Used player meta function GetExperience")
 		
 		return get_exp(self)
 	end
 	
-	function ply_meta:GetLevel()
+	function ply_meta:NZLSGetLevel()
 		--
 		--print("Used player meta function GetLevel")
 		
 		return get_level(self)
 	end
 	
-	function ply_meta:GetSkillLevel(skill_name)
+	function ply_meta:NZLSGetSkillLevel(skill_name)
 		--
 		--print("Used player meta function GetSkillLevel")
 		
 		return get_skill_level(self, skill_name)
 	end
 	
-	function ply_meta:SetExperience(amount)
+	function ply_meta:NZLSSetExperience(amount)
 		--
 		--print("Used player meta function SetExperience")
 		
 		set_exp(amount)
 	end
 	
-	function ply_meta:SetPoints(amount)
+	function ply_meta:NZLSSetPoints(amount)
 		--
 		--print("Used player meta function SetPoints")
 		
 		set_points(self, amount)
 	end
 	
-	function ply_meta:SetSkillLevel(skill_name, level)
+	function ply_meta:NZLSSetSkillLevel(skill_name, level)
 		--
 		--print("Used player meta function SetSkillLevel")
 		
 		set_skill_level(self, skill_name, level)
 	end
-	
-	function ply_meta:RemoveData()
+	 
+	function ply_meta:NZLSRemoveData()
 		--
 		ply_data[self:UserID()] = {}
 	end
 	
-	function ply_meta:ResetData()
-		self:RemoveData()
+	function ply_meta:NZLSResetData()
+		self:NZLSRemoveData()
 		
 		local pd = access_pd(self)
 		
@@ -177,11 +185,15 @@ if SERVER then
 		pd.points_used = 0
 		pd.skills = {}
 		
-		print("Resetting data for player " .. self:Nick())
-		PrintTable(access_pd(self))
+		--print("Resetting data for player " .. self:Nick())
+		--PrintTable(access_pd(self))
 	end
 	
-	--misc global functions
+	------------------------------------------------------------------------------------------
+	--                                                                                      --
+	-- USING access_pd TO SET VALUES PROBABLY WONT WORK, USE ply_data[ply:UserID()] INSTEAD --
+	--                                                                                      --
+	------------------------------------------------------------------------------------------
 	
 	--commands
 	
@@ -193,13 +205,20 @@ if SERVER then
 			local max = nz_level_system.skills[skill_name].MaxLevelPrestige or nz_level_system.skills[skill_name].MaxLevel
 			
 			if level and level > 0 and level <= max then
-				ply:SetSkillLevel(skill_name, level)
+				ply:PrintMessage(HUD_PRINTTALK, "Set skill " .. skill_name .. " to level " .. level .. ".")
+				ply:NZLSSetSkillLevel(skill_name, level)
 			else
-				ply:PrintMessage("Specified skill can only have a level from 0 to " .. (max or "nil"))
+				ply:PrintMessage(HUD_PRINTTALK, "Specified skill can only have a level from 0 to " .. (max or "nil"))
 			end
 		else
-			ply:PrintMessage("Skill does not exist with name " .. (skill_name or "nil"))
+			ply:PrintMessage(HUD_PRINTTALK, "Skill does not exist with name " .. (skill_name or "nil"))
 		end
+	end, _, "Gives the skill at the specified level.")
+	
+	concommand.Add("nz_ls_pd", function(ply, cmd, args)
+		local skill_name = args[1]
+		
+		PrintTable(access_pd(ply), 1)
 	end, _, "Gives the skill at the specified level.")
 	
 	--hooks
@@ -209,8 +228,8 @@ if SERVER then
 		local exp_bonus = nzRound.Number * 5 + 95
 		
 		for _, ply in player.GetHumans() do
-			ply:AddExperience(exp_bonus)
-			ply:AddPoints(1)
+			ply:NZLSAddExperience(exp_bonus)
+			ply:NZLSAddPoints(1)
 		end
 	end)
 	
@@ -220,19 +239,19 @@ if SERVER then
 		print("Attacker ", attacker)
 		
 		if isentity(attacker) and attacker:IsPlayer() then
-			if hitgroup == HITGROUP_HEAD then attacker:AddExperience(15)
-			else attacker:AddExperience(5) end
+			if hitgroup == HITGROUP_HEAD then attacker:NZLSAddExperience(15)
+			else attacker:NZLSAddExperience(5) end
 		end
 	end)
 	
 	hook.Add("PlayerDisconnected", "nz_level_system_disconnect_hook", function(ply)
 		--
-		ply:RemoveData()
+		ply:NZLSRemoveData()
 	end)
 	
 	hook.Add("PlayerInitialSpawn", "nz_level_system_ply_init_hook", function(ply)
 		--
-		ply:ResetData()
+		ply:NZLSResetData()
 	end)
 	
 	--TODO use a bitwise system to determine what networked value needs updating

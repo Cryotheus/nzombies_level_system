@@ -10,7 +10,7 @@ local function calc_mult(ply, level)
 	--if the level parameter is not specified, then fetch the level
 	if level then return level * SKILL.Mult + 1 end
 	
-	return ply:GetSkillLevel("jump") * SKILL.Mult + 1
+	return ply:NZLSGetSkillLevel("jump") * SKILL.Mult + 1
 end
 
 function ply_meta:GetJumpPower()

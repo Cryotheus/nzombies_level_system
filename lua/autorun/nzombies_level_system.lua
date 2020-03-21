@@ -1,12 +1,13 @@
 AddCSLuaFile()
 
 resource.AddSingleFile("materials/gui/background.png")
+resource.AddSingleFile("materials/gui/skillicons/armor.png")
 resource.AddSingleFile("materials/gui/skillicons/jump.png")
 resource.AddSingleFile("materials/gui/skillicons/sprint.png")
+resource.AddSingleFile("materials/gui/skillicons/zombie_resistance.png")
 
 --This is mainly just the loader
 --also, this should pretty much always be false
-
 nz_allow_nasty_reload = false
 
 if nz_level_system then
