@@ -9,6 +9,7 @@ local function calc_mult(ply, level)
 	--calculate how much of a bonus they get
 	--if the level parameter is not specified, then fetch the level
 	if level then return level * SKILL.Mult + 1 end
+	if not ply then return 0 end
 	
 	return ply:NZLSGetSkillLevel("sprint") * SKILL.Mult + 1
 end

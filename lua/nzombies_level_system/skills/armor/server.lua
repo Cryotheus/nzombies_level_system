@@ -10,12 +10,9 @@ end
 
 hook.Add("OnRoundPreparation", "nz_ls_armor_skill_prep_hook", function(round)
 	for _, ply in pairs(player.GetHumans()) do
-		--
-		if not ply then continue
+		if not ply then continue end
 		 
 		local amnt = math.min(ply:Armor() + calc_mult(ply) or 0, 100)
-		
-		--print("Setting player armor to " .. amnt)
 		
 		ply:SetArmor(amnt)
 	end
