@@ -2,7 +2,7 @@ print("Core loaded (client realm)")
 
 --shared functions
 
-include("fn_core")
+local calc_exp, calc_level = include("fn_core.lua")
 
 --not shared stuff
 
@@ -23,7 +23,7 @@ local bar_bg_x = 0
 local bar_bg_y = 0
 local bar_corner = 0
 local bar_h = 0
-local bar_level_text = ""
+local bar_level_text = "level 0"
 local bar_level_text_font = ""
 local bar_level_text_x = 0
 local bar_level_text_y = 0
@@ -113,8 +113,8 @@ if not local_player then
 					percent = (exp - exp_passed) / exp_required
 					percent_bar_w = percent * bar_w
 					
-					--we cache the text so it isn't converted every frame
-					bar_level_text = tostring(current_level)
+					--we cache the text so it isn't created every frame
+					bar_level_text = "level " .. tostring(current_level)
 				end
 			end)
 			
@@ -132,10 +132,12 @@ local fl_draw_DrawText = draw.DrawText
 local fl_draw_RoundedBox = draw.RoundedBox
 
 hook.Add("HUDPaint", "nz_level_system_hud_paint_hook", function()
-	--TODO possibly add stencil animations?
-	fl_draw_RoundedBox(bar_bg_corner, bar_bg_x, bar_bg_y, bar_bg_w, bar_bg_h, color_black)
-	fl_draw_RoundedBox(bar_corner, bar_x, bar_y, percent_bar_w, bar_h, color_blood)
-	
-	--I may make it more descriptive later
-	fl_draw_DrawText(bar_level_text, bar_level_text_font, bar_level_text_x, bar_level_text_y, color_white, TEXT_ALIGN_CENTER)
+	if GetConVar("cl_drawhud"):GetBool() then
+		--TODO possibly add stencil animations with custom textures?
+		fl_draw_RoundedBox(bar_bg_corner, bar_bg_x, bar_bg_y, bar_bg_w, bar_bg_h, color_black)
+		fl_draw_RoundedBox(bar_corner, bar_x, bar_y, percent_bar_w, bar_h, color_blood)
+		
+		--I may make it more descriptive later
+		fl_draw_DrawText(bar_level_text, bar_level_text_font, bar_level_text_x, bar_level_text_y, color_white, TEXT_ALIGN_CENTER)
+	end
 end)

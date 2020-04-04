@@ -1,18 +1,26 @@
+--This is mainly just the loader
+
 AddCSLuaFile()
 
-resource.AddSingleFile("materials/gui/background.png")
-resource.AddSingleFile("materials/gui/skillicons/armor.png")
-resource.AddSingleFile("materials/gui/skillicons/jump.png")
-resource.AddSingleFile("materials/gui/skillicons/sprint.png")
-resource.AddSingleFile("materials/gui/skillicons/zombie_resistance.png")
+if SERVER then
+	resource.AddSingleFile("materials/gui/nzombies_level_system/background.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/armor.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/jump.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/sprint.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/wip.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/zombie_resistance.png")
+	
+	resource.AddSingleFile("sound/nzombies_level_system/gui/skill_upgrade.wav")
+end
 
---This is mainly just the loader
---also, this should pretty much always be false
-nz_allow_nasty_reload = false
+--this should pretty much always be false
+NZLSNastyReload = NZLSNastyReload
+
+if NZLSNastyReload == nil then NZLSNastyReload = false end
 
 if nz_level_system then
-	if nz_allow_nasty_reload then print("\n\n\n\n\n\n\n\nGlobal already exists; but not returning.")
-	else print("\n\n\n\n\n\n\n\nGlobal already exists; returning.") end
+	if NZLSNastyReload then print("[nZLS] Global already exists; but not returning.")
+	else print("[nZLS] Global already exists; returning.") return end
 end
 
 nz_level_system = nz_level_system or {}

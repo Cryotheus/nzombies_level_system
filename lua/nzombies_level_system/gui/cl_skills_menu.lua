@@ -3,45 +3,42 @@ print("***** GUI Reloaded")
 local background = Material("gui/background.png", "noclamp")
 local bg_size = 256
 local bg_size_paralax = bg_size * -2.5
-local derma_create_time = 0
+local browsing = false
+local close_button_x = Material("gui/close_32.vtf")
 local frame_header = 24
 local frame_margin = 80
+local last_hovering = true
 local menus = {}
 local skills = nz_level_system.skills
 local skill_icon_size = 96
 
-local bg_h = 0
-local bg_w = 0
-local frame_h = 0
-local frame_w = 0
-local frame_x = 0
-local frame_y = 0
-local scr_h = 0
-local scr_w = 0
-local sidebar_h = 0
-local sidebar_w = 0
-local sidebar_x = 0
-local sidebar_y = 0
-local sidebutton_h = 0
-local sidebutton_w = 0
-local sidebutton_x = 0
-local sidebutton_y = 0
-local skill_icon_boundary_x = 0
-local skill_icon_boundary_y = 0
-local x = 0
-local x_diff = 0
-local x_final = 0
-local x_off = 0
-local x_start = 0
-local y = 0
-local y_diff = 0
-local y_final = 0
-local y_off = 0
-local y_start = 0
+local bg_h
+local bg_w
+local derma_create_time
+local frame_close_button_margin
+local frame_h
+local frame_w
+local frame_x
+local frame_y
+local scr_h
+local scr_w
+local sidebar_h
+local sidebar_w
+local sidebar_x
+local sidebar_y
+local sidebutton_h
+local sidebutton_w
+local sidebutton_x
+local sidebutton_y
+local skill_icon_boundary_x
+local skill_icon_boundary_y
+local x_final
+local y_final
 
 local color_bg = Color(144, 56, 56)
 local color_bright_white = Color(240, 240, 240)
 local color_bright_white_select = Color(232, 232, 232)
+local color_bright_white_select_loud = Color(216, 216, 216)
 local color_dark_white = Color(208, 208, 208)
 local color_frame_white = Color(224, 224, 224)
 local color_nazi = Color(131, 41, 41)
@@ -57,6 +54,7 @@ local function calc_vars()
 	scr_h = ScrH()
 	scr_w = ScrW()
 	
+	frame_close_button_margin = 4
 	frame_h = scr_h - frame_margin * 2
 	frame_w = scr_w - frame_margin * 2
 	frame_x = frame_margin
@@ -76,6 +74,10 @@ local function calc_vars()
 	skill_icon_boundary_x_min = sidebar_w
 	skill_icon_boundary_y_max = frame_h + skill_icon_size
 	skill_icon_boundary_y_min = frame_header
+	skill_menu_x_max = scr_w - frame_margin
+	skill_menu_x_min = frame_margin + sidebar_w
+	skill_menu_y_max = scr_h - frame_margin
+	skill_menu_y_min = frame_margin + frame_header
 	
 	bg_h = frame_h - frame_header
 	bg_w = frame_w
@@ -112,6 +114,8 @@ local function create_sidebar(frame)
 		button:SetText(text)
 		
 		button.DoClick = function()
+			--frame:MouseCapture(false)
+			
 			frame:Close()
 			func()
 		end
@@ -168,46 +172,76 @@ local function open_settings_menu()
 	create_sidebar(frame)
 	
 	frame:MakePopup()
-	frame:MouseCapture(true)
 end
 
 local function open_skills_menu()
-	calc_vars() --just for now
-	
 	local frame = vgui.Create("DFrame")
 	local frame_on_mouse_press = frame.OnMousePressed
 	local frame_on_mouse_release = frame.OnMousePressed
 	local frame_think = frame.Think
+	local skill_buttons = {}
 	
 	frame:SetBackgroundBlur(true)
 	frame:SetDraggable(false)
+	frame:SetMouseInputEnabled(false)
 	frame:SetPos(frame_x, frame_y)
 	frame:SetSize(frame_w, frame_h)
 	frame:SetTitle("Skills Menu")
 	
+	frame.btnMinim:SetVisible(false)
+	frame.btnMaxim:SetVisible(false)
+	
 	frame.OnMousePressed = function(self, mouse_button)
 		frame_on_mouse_press(self, mouse_button)
 		
-		if mouse_button == MOUSE_RIGHT then
-			--use a detour of the frame's think to do dragging of the internals
+		if mouse_button == MOUSE_LEFT and not browsing then
+			local x = get_mouse_x()
+			local x_traget = x - frame_margin - x_final
+			local y = get_mouse_y()
+			local y_traget = y - frame_margin - y_final
+			
+			if in_range(x, skill_menu_x_min, skill_menu_x_max) and in_range(y, skill_menu_y_min, skill_menu_y_max) then
+				for skill, data in pairs(skills) do
+					local icon_x, icon_y = data.X, data.Y
+					
+					if in_range(x_traget - icon_x, 0, skill_icon_size) and in_range(y_traget - icon_y, 0, skill_icon_size) then
+						print(skill)
+						PrintTable(data, 1)
+						
+						break
+					end
+				end
+			end
+		elseif mouse_button == MOUSE_RIGHT then
+			browsing = true
+			local x_off = x_final
+			local x_start = get_mouse_x() - frame_margin
+			local y_off = y_final
+			local y_start = get_mouse_y() - frame_margin
+			
+			--we need to do this in case they stop dragging and their cursor is off of the panel
 			frame:MouseCapture(true)
 			
-			x_off = x_final
-			x_start = get_mouse_x() - frame_margin
-			
-			y_off = y_final
-			y_start = get_mouse_y() - frame_margin
-			
+			--use a detour of the frame's think to do dragging of the icons
 			frame.Think = function(self)
 				frame_think(self)
-				 
-				x = get_mouse_x() - frame_margin
-				x_diff = x - x_start
-				x_final = x_off + x_diff
 				
-				y = get_mouse_y() - frame_margin
-				y_diff = y - y_start
-				y_final = y_off + y_diff
+				local x = get_mouse_x()
+				local y = get_mouse_y()
+				
+				x_final = x_off + get_mouse_x() - frame_margin - x_start
+				y_final = y_off + get_mouse_y() - frame_margin - y_start
+				
+				--[[for skill, data in pairs(nz_level_system.skills) do
+					local icon_x, icon_y = x_final + data.X, y_final + data.Y
+					local skill_button = skill_buttons[skill]
+					
+					if in_range(icon_x + skill_icon_size, skill_icon_boundary_x_min, skill_icon_boundary_x_max) and in_range(icon_y + skill_icon_size, skill_icon_boundary_y_min, skill_icon_boundary_y_max) then
+						--
+						
+						skill_button:SetPos(icon_x, icon_y)
+					end
+				end]]
 			end
 		end
 	end
@@ -217,17 +251,24 @@ local function open_skills_menu()
 		
 		if mouse_button == MOUSE_RIGHT then
 			--make it do normal think functions again
+			--we need to do this in case they stop dragging and their cursor is off of the panel
 			frame:MouseCapture(false)
+			--frame:RequestFocus()
 			
-			print("End pos: ", x_final, y_final)
-			
+			browsing = false
 			frame.Think = frame_think
 		end
 	end
 	
 	frame.Paint = function(self, w, h)
+		local hovered_skill
+		local not_hovering = true
 		local u_scroll = (x_final / bg_size_paralax) % 1
 		local v_scroll = (y_final / bg_size_paralax) % 1
+		local x = get_mouse_x()
+		local x_traget = x - frame_margin-- - x_final
+		local y = get_mouse_y()
+		local y_traget = y - frame_margin-- - y_final
 		
 		Derma_DrawBackgroundBlur(self, derma_create_time)
 		
@@ -239,7 +280,13 @@ local function open_skills_menu()
 			local icon_x, icon_y = x_final + data.X, y_final + data.Y
 			
 			if in_range(icon_x + skill_icon_size, skill_icon_boundary_x_min, skill_icon_boundary_x_max) and in_range(icon_y + skill_icon_size, skill_icon_boundary_y_min, skill_icon_boundary_y_max) then
-				fl_surf_SetDrawColor(color_bright_white)
+				if not_hovering and in_range(x_traget - icon_x, 0, skill_icon_size) and in_range(y_traget - icon_y, 0, skill_icon_size) then
+					hovered_skill = skill
+					not_hovering = false
+					
+					fl_surf_SetDrawColor(color_bright_white_select_loud)
+				else fl_surf_SetDrawColor(color_bright_white) end
+				
 				fl_surf_SetMaterial(data.Icon)
 				fl_surf_DrawTexturedRect(icon_x, icon_y, skill_icon_size, skill_icon_size)
 			end
@@ -250,7 +297,44 @@ local function open_skills_menu()
 		
 		fl_surf_SetDrawColor(color_nazi)
 		fl_surf_DrawRect(0, 0, w, frame_header)
+		
+		--show that you can click icons, we have to do this every frame because on the next frame it resets
+		if not not_hovering then frame:SetCursor("hourglass") end
+		
+		last_hovering = not_hovering
 	end
+	
+	frame.btnClose.Paint = function(self, w, h)
+		local close_button_h = h - 2 * frame_close_button_margin
+		
+		if self:IsHovered() then fl_surf_SetDrawColor(color_bright_white_select_loud)
+		else fl_surf_SetDrawColor(color_bright_white) end
+		
+		fl_surf_DrawRect(0, frame_close_button_margin, w, close_button_h)
+		
+		fl_surf_SetMaterial(close_button_x)
+		fl_surf_DrawTexturedRect((w - close_button_h) * 0.5, frame_close_button_margin, close_button_h, close_button_h)
+	end
+	
+	--[[create the icons as buttons --disabled because of render order ;-;
+	for skill, data in pairs(nz_level_system.skills) do
+		local icon_x, icon_y = x_final + data.X, y_final + data.Y
+		local skill_button = vgui.Create("DButton", frame)
+		
+		skill_button:SetPos(icon_x, icon_y)
+		skill_button:SetSize(skill_icon_size, skill_icon_size)
+		skill_button:SetText("") --we dont want text
+		
+		skill_button.Paint = function(self, w, h)
+			if self:IsHovered() then fl_surf_SetDrawColor(color_bright_white_select_loud)
+			else fl_surf_SetDrawColor(color_bright_white) end
+			
+			fl_surf_SetMaterial(data.Icon)
+			fl_surf_DrawTexturedRect(0, 0, w, h)
+		end
+		
+		skill_buttons[skill] = skill_button
+	end--]]
 	
 	create_sidebar(frame)
 	
@@ -258,6 +342,7 @@ local function open_skills_menu()
 end
 
 concommand.Add("nz_ls_gui_skills", function()
+	calc_vars() --just for now
 	derma_create_time = SysTime()
 	
 	open_skills_menu()
