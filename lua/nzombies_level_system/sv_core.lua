@@ -20,17 +20,6 @@ local nz_ls_save_sql = CreateConVar("nz_ls_save_sql", "0", {FCVAR_ARCHIVE, FCVAR
 
 --functions
 
-------------------------------------------------------------------------------------------
---                                                                                      --
--- USING access_pd TO SET VALUES PROBABLY WONT WORK, USE ply_data[ply:UserID()] INSTEAD --
---                                                                                      --
-------------------------------------------------------------------------------------------
-
-local function access_pd(ply)
-	--because I'm lazy
-	return ply_data[ply:UserID()]
-end
-
 local function async_path(steam_id)
 	--I structure the files in a way that no folder has more than 10 files and 10 folders
 	--this way, if we have to search through all of them we can do it asynchronously so the server does not experience major lag
@@ -45,7 +34,7 @@ end
 
 local function get_exp(ply)
 	--get the player's current exp
-	return  access_pd(ply).experience or 0
+	return ply_data[ply:UserID()].experience or 0
 end
 
 local function get_level(ply)
@@ -55,12 +44,12 @@ end
 
 local function get_points(ply)
 	--returns the total amount of skill points they have been given
-	return access_pd(ply).points or 0
+	return ply_data[ply:UserID()].points or 0
 end
 
 local function get_points_eaten(ply)
 	--returns how many skill points they have spent
-	return access_pd(ply).points_used or 0
+	return ply_data[ply:UserID()].points_used or 0
 end
 
 local function get_points_left(ply)
@@ -70,12 +59,12 @@ end
 
 local function get_points_prestiege(ply)
 	--returns the total amount of skill points they have been given
-	return access_pd(ply).points_prestiege or 0
+	return ply_data[ply:UserID()].points_prestiege or 0
 end
 
 local function get_points_prestiege_eaten(ply)
 	--returns how many skill points they have spent
-	return access_pd(ply).points_prestiege_used or 0
+	return ply_data[ply:UserID()].points_prestiege_used or 0
 end
 
 local function get_points_prestiege_left(ply)
@@ -85,21 +74,41 @@ end
 
 local function get_skills(ply)
 	--
-	return access_pd(ply).skills
+	return ply_data[ply:UserID()].skills
 end
 
 local function get_skill_level(ply, skill_name)
 	--returns how many times the skill has been leveled
-	local skill = access_pd(ply).skills[skill_name] or {}
+	local skill = ply_data[ply:UserID()].skills[skill_name] or {}
 	
 	return skill and skill.level or 0
 end
 
 local function get_skill_level_prestiege(ply, skill_name)
 	--returns how many times the skill has been prestiege leveled
-	local skill = access_pd(ply).skills[skill_name] or {}
+	local skill = ply_data[ply:UserID()].skills[skill_name] or {}
 	
 	return skill.level_prestiege or 0
+end
+
+local function load(ply)
+	local id = ply:UserID()
+	local path = async_path(ply:SteamID())
+	
+	ply_data[id] = {}
+	
+	ply_data[id].experience = 0
+	ply_data[id].points = 0
+	ply_data[id].points_prestiege = 0
+	ply_data[id].points_prestiege_used = 0
+	ply_data[id].points_used = 0
+	
+	local skills_read = file.Read(path .. "skills.json", "DATA")
+	local stats_read = file.Read(path .. "stats.json", "DATA")
+	
+	if stats_read then ply_data[id] = table.Merge(ply_data[id], util.JSONToTable(skills_read)) end
+	if skills_read then ply_data[id].skills = util.JSONToTable(skills_read)
+	else ply_data[id].skills = {} end
 end
 
 local function save_skills(ply, path)
@@ -109,36 +118,36 @@ end
 
 local function save_stats(ply, path)
 	--save their statistics like exp, points, etc.
-	local stats = access_pd(ply)
+	local stats = table.Copy(ply_data[ply:UserID()])
 	
 	stats.skills = nil
 	
-	file.Write(path .. "stats.json", util.TableToJSON(get_skills(ply), true))
+	file.Write(path .. "stats.json", util.TableToJSON(stats, true))
 end
 
 local function set_exp(ply, amount)
 	--sets the player's exp
-	access_pd(ply).experience = amount
+	ply_data[ply:UserID()].experience = amount
 end
 
 local function set_points(ply, amount)
 	--sets the total amount of skill points they have been given
-	access_pd(ply).points = amount
+	ply_data[ply:UserID()].points = amount
 end
 
 local function set_points_eaten(ply, amount)
 	--sets how many skill points they have spent
-	access_pd(ply).points_used = amount
+	ply_data[ply:UserID()].points_used = amount
 end
 
 local function set_points_prestiege(ply, amount)
 	--sets the total amount of skill points they have been given
-	access_pd(ply).points_prestiege = amount
+	ply_data[ply:UserID()].points_prestiege = amount
 end
 
 local function set_points_prestiege_eaten(ply, amount)
 	--sets how many skill points they have spent
-	access_pd(ply).points_prestiege_used = amount
+	ply_data[ply:UserID()].points_prestiege_used = amount
 end
 
 local function set_skill_level(ply, skill_name, level)
@@ -147,7 +156,7 @@ local function set_skill_level(ply, skill_name, level)
 	
 	if level ~= old_level then
 		local ply_skill = ply_data[ply:UserID()].skills[skill_name]
-		local skill = nz_level_system.skills[skill_name]
+		local skill = NZLS.skills[skill_name]
 		
 		if skill.OnLevelChangedPre then skill.OnLevelChangedPre(ply, old_level, level) end
 		
@@ -169,7 +178,7 @@ local function set_skill_level_prestiege(ply, skill_name, level)
 	--sets how many times the skill has been leveled
 	if level ~= old_level then
 		local ply_skill = ply_data[ply:UserID()].skills[skill_name]
-		local skill = nz_level_system.skills[skill_name]
+		local skill = NZLS.skills[skill_name]
 		
 		if skill.OnLevelPrestiegeChangedPre then skill.OnLevelPrestiegeChangedPre(ply, old_level, level) end
 		
@@ -254,6 +263,12 @@ function ply_meta:NZLSGetSkillLevelSum(skill_name)
 	return get_skill_level(self, skill_name) + get_skill_level_prestiege(self, skill_name)
 end
 
+function ply_meta:NZLSHasData()
+	if ply_data[self:UserID()] then return true end
+	
+	return false
+end
+
 function ply_meta:NZLSSetExperience(amount)
 	--
 	set_exp(amount)
@@ -269,6 +284,20 @@ function ply_meta:NZLSSetSkillLevel(skill_name, level)
 	set_skill_level(self, skill_name, level)
 end
 
+function ply_meta:NZLSSetSkillLevelPrestiege(skill_name, level)
+	--
+	set_skill_level_prestiege(self, skill_name, level)
+end
+
+function ply_meta:NZLSSetSkillLevelSum(skill_name, level)
+	local data = NZLS.skills[skill_name]
+	local max_level = data.MaxLevel
+	local max_level_prestiege = data.MaxLevelPrestige or 0
+	
+	set_skill_level(self, skill_name, math.min(level, max_level))
+	set_skill_level_prestiege(self, skill_name, math.Clamp(level - max_level, 0, max_level_prestiege))
+end
+
 function ply_meta:NZLSRemoveData()
 	--
 	ply_data[self:UserID()] = {}
@@ -279,67 +308,40 @@ function ply_meta:NZLSResetData()
 	
 	print("Resetting ply data for " .. self:Nick())
 	
-	local pd = ply_data[self:UserID()]
+	--[[local pd = ply_data[self:UserID()]
 	
 	pd.experience = 0
 	pd.points = 0
 	pd.points_prestiege = 0
 	pd.points_prestiege_used = 0
 	pd.points_used = 0
-	pd.skills = {}
+	pd.skills = {}]]
+	
+	load(self)
 	
 	print("Data")
 	PrintTable(ply_data[self:UserID()], 1) 
-	
-	--print("Resetting data for player " .. self:Nick())
-	--PrintTable(access_pd(self))
 end
 
-------------------------------------------------------------------------------------------
---                                                                                      --
--- USING access_pd TO SET VALUES PROBABLY WONT WORK, USE ply_data[ply:UserID()] INSTEAD --
---                                                                                      --
-------------------------------------------------------------------------------------------
-
 --commands
-
-concommand.Add("nz_ls_debug_give_skill", function(ply, cmd, args)
-	if not ply or not ply:IsSuperAdmin() then ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] This command can only be used by super admins.") return end
-	
-	local skill_name = args[1]
-	
-	if nz_level_system.skills[skill_name] then
-		local data = nz_level_system.skills[skill_name]
-		local level = tonumber(args[2])
-		local max_level = data.MaxLevel
-		local max_level_prestiege = data.MaxLevelPrestige or 0
-		
-		if level and level > 0 and level <= max_level + max_level_prestiege then
-			set_skill_level(ply, skill_name, math.min(level, max_level))
-			set_skill_level_prestiege(ply, skill_name, math.Clamp(level - max_level, 0, max_level_prestiege))
-			
-			ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] Set skill " .. skill_name .. " to level " .. level .. ".")
-		else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] Specified skill can only have a level from 0 to " .. (max or "nil")) end
-	else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] Skill does not exist with name " .. (skill_name or "nil")) end
-end, _, "Gives the skill at the specified level.")
 
 concommand.Add("nz_ls_debug_pd", function(ply, cmd, args)
 	if not ply or not ply:IsSuperAdmin() then ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] This command can only be used by super admins.") return end
 	
 	local skill_name = args[1]
 	
-	PrintTable(access_pd(Entity(1)), 1)
-end, _, "Gives the skill at the specified level.")
+	PrintTable(ply_data[ply:UserID()], 1)
+end, _, "Provides information about the player data.")
 
 concommand.Add("nz_ls_purchase", function(ply, cmd, args)
 	if not IsValid(ply) then return end
 	
 	local skill_name = args[1]
 	
-	if nz_level_system.skills[skill_name] then
+	if NZLS.skills[skill_name] then
 		local current_level = get_skill_level(ply, skill_name)
 		local current_level_prestiege = get_skill_level_prestiege(ply, skill_name)
-		local data = nz_level_system.skills[skill_name]
+		local data = NZLS.skills[skill_name]
 		local max_level = data.MaxLevel
 		local max_level_prestiege = data.MaxLevelPrestige
 		

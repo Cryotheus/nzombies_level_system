@@ -6,10 +6,11 @@ local fl_ply_meta_GetRunSpeed = ply_meta.GetRunSpeed
 local fl_ply_meta_SetRunSpeed = ply_meta.SetRunSpeed
 
 local function calc_mult(ply, level)
+	--rem --remove the functionality of calculating the mult with a different level when finished
 	--calculate how much of a bonus they get
 	--if the level parameter is not specified, then fetch the level
 	if level then return level * SKILL.Mult + 1 end
-	if not ply then return 0 end
+	if not ply or not ply:NZLSHasData() then return 1 end
 	
 	return ply:NZLSGetSkillLevelSum("sprint") * SKILL.Mult + 1
 end

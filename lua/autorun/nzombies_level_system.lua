@@ -10,7 +10,9 @@ if SERVER then
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/wip.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/zombie_resistance.png")
 	
+	resource.AddSingleFile("sound/nzombies_level_system/gui/prestiege.wav")
 	resource.AddSingleFile("sound/nzombies_level_system/gui/skill_upgrade.wav")
+	resource.AddSingleFile("sound/nzombies_level_system/gui/wip.wav")
 end
 
 --this should pretty much always be false
@@ -18,13 +20,13 @@ NZLSNastyReload = NZLSNastyReload
 
 if NZLSNastyReload == nil then NZLSNastyReload = false end
 
-if nz_level_system then
+if NZLS then
 	if NZLSNastyReload then print("[nZLS] Global already exists; but not returning.")
 	else print("[nZLS] Global already exists; returning.") return end
 end
 
-nz_level_system = nz_level_system or {}
-nz_level_system.skills = nz_level_system.skills or {}
+NZLS = NZLS or {}
+NZLS.skills = NZLS.skills or {}
 
 local max_search_level = 4
 

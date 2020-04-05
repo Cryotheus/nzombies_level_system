@@ -9,7 +9,7 @@ local frame_header = 24
 local frame_margin = 80
 local last_hovering = true
 local menus = {}
-local skills = nz_level_system.skills
+local skills = NZLS.skills
 local skill_icon_size = 96
 
 local bg_h
@@ -181,6 +181,9 @@ local function open_skills_menu()
 	local frame_think = frame.Think
 	local skill_buttons = {}
 	
+	--NOTE, we can take hovered_skill in frame.Paint and use that in frame.OnMousePressed to do stuff, yeah.
+	--this way we don't have to itterate over the skills twice
+	
 	frame:SetBackgroundBlur(true)
 	frame:SetDraggable(false)
 	frame:SetMouseInputEnabled(false)
@@ -232,7 +235,7 @@ local function open_skills_menu()
 				x_final = x_off + get_mouse_x() - frame_margin - x_start
 				y_final = y_off + get_mouse_y() - frame_margin - y_start
 				
-				--[[for skill, data in pairs(nz_level_system.skills) do
+				--[[for skill, data in pairs(NZLS.skills) do
 					local icon_x, icon_y = x_final + data.X, y_final + data.Y
 					local skill_button = skill_buttons[skill]
 					
@@ -317,7 +320,7 @@ local function open_skills_menu()
 	end
 	
 	--[[create the icons as buttons --disabled because of render order ;-;
-	for skill, data in pairs(nz_level_system.skills) do
+	for skill, data in pairs(NZLS.skills) do
 		local icon_x, icon_y = x_final + data.X, y_final + data.Y
 		local skill_button = vgui.Create("DButton", frame)
 		
@@ -341,12 +344,15 @@ local function open_skills_menu()
 	frame:MakePopup()
 end
 
-concommand.Add("nz_ls_gui_skills", function()
+local function setup_menu()
 	calc_vars() --just for now
 	derma_create_time = SysTime()
-	
-	open_skills_menu()
-end, _, "Opens the GUI to purchase and upgrade skills.")
+end
+
+concommand.Add("nz_ls_gui", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
+concommand.Add("nz_ls_gui_info", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to view information about your progress.")
+concommand.Add("nz_ls_gui_skills", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
+concommand.Add("nz_ls_gui_settings", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
 
 hook.Add("OnScreenSizeChanged", "nz_ls_gui_screen_res_changed_hook", function() calc_vars() end)
 

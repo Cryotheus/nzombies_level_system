@@ -11,10 +11,8 @@ local function load_skill(skill_name, skill_path)
 		AddCSLuaFile(skill_path .. "client.lua")
 		AddCSLuaFile(skill_path .. "shared.lua")
 		
-		nz_level_system.skills[skill_name] = include(skill_path .. "server.lua")
-	else
-		nz_level_system.skills[skill_name] = include(skill_path .. "client.lua")
-	end
+		NZLS.skills[skill_name] = include(skill_path .. "server.lua")
+	else NZLS.skills[skill_name] = include(skill_path .. "client.lua") end
 end
 
 for _, folder in ipairs(folders) do load_skill(folder, directory .. folder .. "/") end
