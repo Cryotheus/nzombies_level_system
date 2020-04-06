@@ -32,6 +32,11 @@ local function async_path(steam_id)
 	return path
 end
 
+local function check(ply)
+	check_exp = true
+	check_exp_list[ply:UserID()] = true
+end
+
 local function get_exp(ply)
 	--get the player's current exp
 	return ply_data[ply:UserID()].experience or 0
@@ -97,18 +102,19 @@ local function load(ply)
 	
 	ply_data[id] = {}
 	
+	--we pre set these in case they have no saved data
 	ply_data[id].experience = 0
 	ply_data[id].points = 0
 	ply_data[id].points_prestiege = 0
 	ply_data[id].points_prestiege_used = 0
 	ply_data[id].points_used = 0
+	ply_data[id].skills = {}
 	
 	local skills_read = file.Read(path .. "skills.json", "DATA")
 	local stats_read = file.Read(path .. "stats.json", "DATA")
 	
-	if stats_read then ply_data[id] = table.Merge(ply_data[id], util.JSONToTable(skills_read)) end
-	if skills_read then ply_data[id].skills = util.JSONToTable(skills_read)
-	else ply_data[id].skills = {} end
+	if stats_read then ply_data[id] = table.Merge(ply_data[id], util.JSONToTable(stats_read)) end
+	if skills_read then ply_data[id].skills = util.JSONToTable(skills_read) end
 end
 
 local function save_skills(ply, path)
@@ -117,9 +123,8 @@ local function save_skills(ply, path)
 end
 
 local function save_stats(ply, path)
-	--save their statistics like exp, points, etc.
+	--save their statistics like exp, points, etc. but not skills
 	local stats = table.Copy(ply_data[ply:UserID()])
-	
 	stats.skills = nil
 	
 	file.Write(path .. "stats.json", util.TableToJSON(stats, true))
@@ -211,9 +216,7 @@ end
 
 function ply_meta:NZLSAddExperience(amount)
 	--this will make the information on the client get updated
-	--print("Used player meta function AddExperience")
-	check_exp = true
-	check_exp_list[self:UserID()] = true
+	check(self)
 	
 	local current_exp = get_exp(self)
 	local current_level = calc_level(current_exp)
@@ -231,6 +234,11 @@ end
 function ply_meta:NZLSAddPoints(amount)
 	--
 	set_points(self, get_points(self) + amount)
+end
+
+function ply_meta:NZLSAddPointsPrestiege(amount)
+	--
+	set_points_prestiege(self, get_points_prestiege(self) + amount)
 end
 
 function ply_meta:NZLSGetExperience()
@@ -271,12 +279,18 @@ end
 
 function ply_meta:NZLSSetExperience(amount)
 	--
-	set_exp(amount)
+	check(self)
+	set_exp(self, amount)
 end
 
 function ply_meta:NZLSSetPoints(amount)
 	--
 	set_points(self, amount)
+end
+
+function ply_meta:NZLSSetPointsPrestiege(amount)
+	--
+	set_points_prestiege(self, amount)
 end
 
 function ply_meta:NZLSSetSkillLevel(skill_name, level)
@@ -307,15 +321,6 @@ function ply_meta:NZLSResetData()
 	self:NZLSRemoveData()
 	
 	print("Resetting ply data for " .. self:Nick())
-	
-	--[[local pd = ply_data[self:UserID()]
-	
-	pd.experience = 0
-	pd.points = 0
-	pd.points_prestiege = 0
-	pd.points_prestiege_used = 0
-	pd.points_used = 0
-	pd.skills = {}]]
 	
 	load(self)
 	
