@@ -12,4 +12,7 @@ local function calc_level(exp)
 	return math.floor(math.sqrt(exp / 100))
 end
 
+function NZLSCalcExp(level) return calc_exp(level) end
+function NZLSCalcLevel(exp) return calc_level(exp) end
+
 return calc_exp, calc_level
