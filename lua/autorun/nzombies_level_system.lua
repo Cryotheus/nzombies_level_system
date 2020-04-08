@@ -4,9 +4,9 @@ AddCSLuaFile()
 
 if SERVER then
 	resource.AddSingleFile("materials/gui/nzombies_level_system/background.png")
-	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/armor.png")
-	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/jump.png")
-	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/sprint.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/agility.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/leap.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/relief.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/wip.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/zombie_resistance.png")
 	
@@ -15,10 +15,7 @@ if SERVER then
 	resource.AddSingleFile("sound/nzombies_level_system/gui/wip.wav")
 end
 
---this should pretty much always be false
-NZLSNastyReload = NZLSNastyReload
-
-if NZLSNastyReload == nil then NZLSNastyReload = false end
+--NZLSNastyReload should pretty much always be false
 
 if NZLS then
 	if NZLSNastyReload then print("[nZLS] Global already exists; but not returning.")

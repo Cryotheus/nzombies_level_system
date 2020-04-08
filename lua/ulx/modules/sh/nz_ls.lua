@@ -3,7 +3,7 @@ local CATEGORY_NAME = "nZombies Level System"
 local ulx_completes_skills = {}
 
 if NZLS and NZLS.skills then for skill, data in pairs(NZLS.skills) do table.insert(ulx_completes_skills, skill) end
-else ulx_completes_skills = {"armor", "jump", "sprint"} end
+else ulx_completes_skills = {"agility", "jump", "motivation", "relief"} end
 
 function ulx.nzlsaddexp(ply, targets, amount)
 	for _, target in pairs(targets) do target:NZLSAddExperience(amount) end
@@ -13,12 +13,12 @@ end
 
 function ulx.nzlsaddlevels(ply, targets, levels)
 	for _, target in pairs(targets) do
-		local amount = NZLSCalcExp(NZLSCalcLevel(target:NZLSGetExperience()) + levels)
+		local levels = NZLSCalcExp(NZLSCalcLevel(target:NZLSGetExperience()) + levels)
 		
-		target:NZLSSetExperience(amount)
+		target:NZLSSetExperience(levels)
 	end
 	
-	ulx.fancyLogAdmin(ply, true, "#A gave #T " .. amount .. " experience.", targets)
+	ulx.fancyLogAdmin(ply, true, "#A gave #T " .. levels .. " experience.", targets)
 end
 
 function ulx.nzlsaddpoints(ply, targets, amount, prestiege)

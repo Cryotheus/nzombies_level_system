@@ -5,15 +5,17 @@ local function calc_mult(ply, level)
 	--if the level parameter is not specified, then fetch the level
 	if level then return level * SKILL.Mult end
 	
-	return ply:NZLSGetSkillLevelSum("armor") * SKILL.Mult
+	return ply:NZLSGetSkillLevelSum("relief") * SKILL.Mult
 end
 
 hook.Add("OnRoundPreparation", "nz_ls_armor_skill_prep_hook", function(round)
-	for _, ply in pairs(player.GetHumans()) do
-		if not ply then continue end
-		
-		ply:SetArmor(math.min(ply:Armor() + calc_mult(ply) or 0, 100))
-	end
+	timer.Create("nz_ls_motivation_skill_timer", 2, 1, function()
+		for _, ply in pairs(player.GetHumans()) do
+			if not ply then continue end
+			
+			ply:AddArmor(calc_mult(ply), 100)
+		end
+	end)
 end)
 
 return SKILL

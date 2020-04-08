@@ -5,6 +5,12 @@ print("Core loaded (client realm)")
 local calc_exp, calc_level = include("fn_core.lua")
 
 --not shared stuff
+--globals!
+
+NZLSData = {}
+NZLSSkillVisibility = {}
+
+--locals
 
 local current_level = 0
 local exp = 0
@@ -16,6 +22,7 @@ local percent = 0
 local scr_h = 0
 local scr_w = 0
 
+--TODO: stop assigning variables that don't yet need to be assigned, only declared
 local bar_bg_corner = 0
 local bar_bg_h = 0
 local bar_bg_w = 0
@@ -24,7 +31,7 @@ local bar_bg_y = 0
 local bar_corner = 0
 local bar_h = 0
 local bar_level_text = "level 0"
-local bar_level_text_font = ""
+local bar_level_text_font
 local bar_level_text_x = 0
 local bar_level_text_y = 0
 local bar_scale = 1
@@ -99,7 +106,7 @@ if not local_player then
 		
 		if local_player then
 			calc_vars()
-			print("[nZ LS] Obtained local player.")
+			print("[nZLS] Obtained local player.")
 			
 			hook.Add("Think", "nz_level_system_think_hook", function()
 				--
@@ -123,6 +130,8 @@ if not local_player then
 	end)
 end
 
+--hooks
+
 hook.Add("OnScreenSizeChanged", "nz_ls_screen_res_changed_hook", function()
 	calc_vars()
 	set_font(16 * bar_scale, 150)
@@ -139,5 +148,61 @@ hook.Add("HUDPaint", "nz_level_system_hud_paint_hook", function()
 		
 		--I may make it more descriptive later
 		fl_draw_DrawText(bar_level_text, bar_level_text_font, bar_level_text_x, bar_level_text_y, color_white, TEXT_ALIGN_CENTER)
+	end
+end)
+
+--net
+
+net.Receive("nzls_data", function(size, ply)
+	local length = net.ReadUInt(32)
+	local ply_bit_data = net.ReadData(length)
+	local ply_data = util.Decompress(ply_bit_data)
+	
+	print("Receieved a player data update with a summed length of " .. size .. " and a data length of " .. length .. ".")
+	
+	NZLSData = util.JSONToTable(ply_data)
+	NZLSSkillVisibility = {}
+	
+	--move to cl_menu
+	
+	local ply_skills = NZLSData.skills
+	local points = NZLSData.points
+	
+	for skill, data in pairs(NZLS.skills) do
+		local requirements = data.Requirements
+		local requirements_met = true
+		
+		--check if they have the required skills at the required level
+		if requirements.Skills then
+			for skill_name, level in pairs(requirements.Skills) do
+				local skill_data = ply_skills[skill_name] and ply_skills[skill_name].level or 0
+				
+				if skill_data >= level then continue end
+				
+				print("Did not meet " .. skill_name .. " skill level requirement of " .. skill_data .. " for skill " .. skill .. ".")
+				
+				requirements_met = false
+				
+				break
+			end
+		end
+		
+		print(skill, requirements_met)
+		
+		if requirements_met then
+			if not ply_skills[skill] or not ply_skills[skill].level then continue end
+			
+			local level = ply_skills[skill].level or 0
+			local visibility = 0
+			
+			if current_level >= requirements.Level then
+				visibility = 1
+				
+				--visibility @ 2 means to make it look like they can click it
+				if points >= data.Cost((level or 0) + 1) or level >= data.MaxLevel then visibility = 2 end
+			end
+			
+			NZLSSkillVisibility[skill] = visibility
+		end
 	end
 end)

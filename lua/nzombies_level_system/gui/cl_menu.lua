@@ -7,13 +7,13 @@ local browsing = false
 local close_button_x = Material("gui/close_32.vtf")
 local frame_header = 24
 local frame_margin = 80
-local last_hovering = true
 local menus = {}
 local skills = NZLS.skills
 local skill_icon_size = 96
 
 local bg_h
 local bg_w
+local current_menu
 local derma_create_time
 local frame_close_button_margin
 local frame_h
@@ -107,24 +107,33 @@ local function create_sidebar(frame)
 	
 	for text, func in pairs(menus) do
 		local button = scroll:Add("DButton")
+		local is_current = text == current_menu
 		
 		button:Dock(TOP)
 		button:DockMargin(0, 0, scroll_bar_margin, 5)
 		button:SetSize(frame_w - scroll_bar_margin - 5, frame_h * 0.06)
 		button:SetText(text)
+		button:SetTextColor(is_current and color_bright_white or color_nazi)
 		
 		button.DoClick = function()
-			--frame:MouseCapture(false)
-			
 			frame:Close()
 			func()
 		end
 		
-		button.Paint = function(self, w, h) 
-			if button:IsHovered() then fl_surf_SetDrawColor(color_bright_white_select)
-			else fl_surf_SetDrawColor(color_bright_white) end
-			
-			fl_surf_DrawRect(0, 0, w, h)
+		if is_current then
+			button.Paint = function(self, w, h) 
+				if button:IsHovered() then fl_surf_SetDrawColor(color_nazi_select)
+				else fl_surf_SetDrawColor(color_nazi) end
+				
+				fl_surf_DrawRect(0, 0, w, h)
+			end
+		else
+			button.Paint = function(self, w, h) 
+				if button:IsHovered() then fl_surf_SetDrawColor(color_bright_white_select)
+				else fl_surf_SetDrawColor(color_bright_white) end
+				
+				fl_surf_DrawRect(0, 0, w, h)
+			end
 		end
 	end
 end
@@ -134,7 +143,7 @@ local function get_mouse_y() return math.Clamp(gui.MouseY(), 1, scr_h - 1) end
 local function in_range(num, min, max) return num >= min and num <= max end
 
 local function open_settings_menu()
-	calc_vars() --just for now
+	current_menu = "Settings"
 	
 	local frame = vgui.Create("DFrame")
 	local frame_think = frame.Think
@@ -175,10 +184,13 @@ local function open_settings_menu()
 end
 
 local function open_skills_menu()
+	current_menu = "Skills"
+	
 	local frame = vgui.Create("DFrame")
 	local frame_on_mouse_press = frame.OnMousePressed
 	local frame_on_mouse_release = frame.OnMousePressed
 	local frame_think = frame.Think
+	local hovered_skill
 	local skill_buttons = {}
 	
 	--NOTE, we can take hovered_skill in frame.Paint and use that in frame.OnMousePressed to do stuff, yeah.
@@ -198,22 +210,9 @@ local function open_skills_menu()
 		frame_on_mouse_press(self, mouse_button)
 		
 		if mouse_button == MOUSE_LEFT and not browsing then
-			local x = get_mouse_x()
-			local x_traget = x - frame_margin - x_final
-			local y = get_mouse_y()
-			local y_traget = y - frame_margin - y_final
-			
-			if in_range(x, skill_menu_x_min, skill_menu_x_max) and in_range(y, skill_menu_y_min, skill_menu_y_max) then
-				for skill, data in pairs(skills) do
-					local icon_x, icon_y = data.X, data.Y
-					
-					if in_range(x_traget - icon_x, 0, skill_icon_size) and in_range(y_traget - icon_y, 0, skill_icon_size) then
-						print(skill)
-						PrintTable(data, 1)
-						
-						break
-					end
-				end
+			if hovered_skill then
+				local ply = LocalPlayer()
+				local hovered_skill_data = NZLS.skills[hovered_skill]
 			end
 		elseif mouse_button == MOUSE_RIGHT then
 			browsing = true
@@ -264,7 +263,6 @@ local function open_skills_menu()
 	end
 	
 	frame.Paint = function(self, w, h)
-		local hovered_skill
 		local not_hovering = true
 		local u_scroll = (x_final / bg_size_paralax) % 1
 		local v_scroll = (y_final / bg_size_paralax) % 1
@@ -280,6 +278,7 @@ local function open_skills_menu()
 		fl_surf_DrawTexturedRectUV(sidebar_w, frame_header, bg_w, bg_h, u_scroll, v_scroll, bg_x_tiles + u_scroll, bg_y_tiles + v_scroll)
 		
 		for skill, data in pairs(skills) do
+			--if NZLSSkillVisibility[skill] then --not yet, needs some work
 			local icon_x, icon_y = x_final + data.X, y_final + data.Y
 			
 			if in_range(icon_x + skill_icon_size, skill_icon_boundary_x_min, skill_icon_boundary_x_max) and in_range(icon_y + skill_icon_size, skill_icon_boundary_y_min, skill_icon_boundary_y_max) then
@@ -293,6 +292,7 @@ local function open_skills_menu()
 				fl_surf_SetMaterial(data.Icon)
 				fl_surf_DrawTexturedRect(icon_x, icon_y, skill_icon_size, skill_icon_size)
 			end
+			--end
 		end
 		
 		fl_surf_SetDrawColor(color_frame_white)
@@ -302,9 +302,9 @@ local function open_skills_menu()
 		fl_surf_DrawRect(0, 0, w, frame_header)
 		
 		--show that you can click icons, we have to do this every frame because on the next frame it resets
-		if not not_hovering then frame:SetCursor("hourglass") end
-		
-		last_hovering = not_hovering
+		--we also want the OnMousePressed to know we are not hovering a skill
+		if not_hovering then hovered_skill = nil
+		else frame:SetCursor("hand") end
 	end
 	
 	frame.btnClose.Paint = function(self, w, h)
@@ -319,7 +319,7 @@ local function open_skills_menu()
 		fl_surf_DrawTexturedRect((w - close_button_h) * 0.5, frame_close_button_margin, close_button_h, close_button_h)
 	end
 	
-	--[[create the icons as buttons --disabled because of render order ;-;
+	--[[create the icons as buttons --disabled because of render order ;-; --probably could be fixed by making the draggable area it's own panel
 	for skill, data in pairs(NZLS.skills) do
 		local icon_x, icon_y = x_final + data.X, y_final + data.Y
 		local skill_button = vgui.Create("DButton", frame)
@@ -359,6 +359,7 @@ hook.Add("OnScreenSizeChanged", "nz_ls_gui_screen_res_changed_hook", function() 
 --we have to do this after the functions are declared because they are not global
 --and we have this in the first place so we don't have impossible ordering scenarios
 menus = {
+	["Challenges"] = open_skills_menu,
 	["Settings"] = open_settings_menu,
 	["Skills"] = open_skills_menu
 }

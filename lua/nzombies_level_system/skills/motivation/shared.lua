@@ -5,6 +5,6 @@ SKILL.CostPrestige = function(level) return 5 end
 SKILL.Mult = 100
 SKILL.MaxLevel = 5
 SKILL.MaxLevelPrestige = 6
-SKILL.Requirements = {["level"] = 5}
+SKILL.Requirements = {["Level"] = 5}
 
 return SKILL

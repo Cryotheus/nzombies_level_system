@@ -12,7 +12,7 @@ local function calc_mult(ply, level)
 	if level then return level * SKILL.Mult + 1 end
 	if not ply or not ply:NZLSHasData() then return 1 end
 	
-	return ply:NZLSGetSkillLevelSum("sprint") * SKILL.Mult + 1
+	return ply:NZLSGetSkillLevelSum("agility") * SKILL.Mult + 1
 end
 
 function ply_meta:GetRunSpeed()

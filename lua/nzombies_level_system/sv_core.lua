@@ -1,6 +1,8 @@
 print("Core loaded (server realm)")
 
---shared functions
+--shared stuff
+--util strings
+util.AddNetworkString("nzls_data")
 
 AddCSLuaFile("fn_core.lua")
 
@@ -201,6 +203,20 @@ local function set_skill_level_prestiege(ply, skill_name, level)
 	end
 end
 
+local function update_data(ply)
+	--we probably won't ever have enough data to warrant compression but we might as well since it is a lot of information
+	local data = ply_data[ply:UserID()]
+	data.experience = nil --we don't need to send exp, it's already networked
+	
+	local compressed = util.Compress(util.TableToJSON(data))
+	local length = compressed:len()
+	
+	net.Start("nzls_data")
+	net.WriteUInt(length, 32)
+	net.WriteData(compressed, length)
+	net.Send(ply)
+end
+
 local function whole_save(ply)
 	--we want to keep files small for asynchronous querying
 	local path = async_path(ply:SteamID())
@@ -320,9 +336,8 @@ end
 function ply_meta:NZLSResetData()
 	self:NZLSRemoveData()
 	
-	print("Resetting ply data for " .. self:Nick())
-	
-	load(self)
+	load(self) --load their info from the saved files
+	update_data(self) --send the client their data
 	
 	print("Data")
 	PrintTable(ply_data[self:UserID()], 1) 
@@ -337,6 +352,10 @@ concommand.Add("nz_ls_debug_pd", function(ply, cmd, args)
 	
 	PrintTable(ply_data[ply:UserID()], 1)
 end, _, "Provides information about the player data.")
+
+concommand.Add("nz_ls_update_data", function(ply, cmd, args)
+	if ply then update_data(ply) end
+end, _, "Requests the server to send information about the player.")
 
 concommand.Add("nz_ls_purchase", function(ply, cmd, args)
 	if not IsValid(ply) then return end
