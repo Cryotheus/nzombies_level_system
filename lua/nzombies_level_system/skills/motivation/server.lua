@@ -1,11 +1,9 @@
 local SKILL = include("shared.lua")
 
-local function calc_mult(ply, level)
+local function calc_mult(ply)
 	--calculate how much of a bonus they get
-	--if the level parameter is not specified, then fetch the level
-	if level then return level * SKILL.Mult end
 	
-	return ply:NZLSGetSkillLevelSum("motivation") * SKILL.Mult
+	return ply:NZLSHasData() and ply:NZLSGetSkillLevelSum("motivation") * SKILL.Mult or 0
 end
 
 hook.Add("PlayerSpawn", "nz_ls_motivation_skill_spawn_hook", function(ply)

@@ -178,6 +178,8 @@ local function open_settings_menu()
 		fl_surf_DrawRect(0, 0, w, frame_header)
 	end
 	
+	
+	
 	create_sidebar(frame)
 	
 	frame:MakePopup()
@@ -213,6 +215,8 @@ local function open_skills_menu()
 			if hovered_skill then
 				local ply = LocalPlayer()
 				local hovered_skill_data = NZLS.skills[hovered_skill]
+				
+				--do stuff
 			end
 		elseif mouse_button == MOUSE_RIGHT then
 			browsing = true
@@ -319,6 +323,8 @@ local function open_skills_menu()
 		fl_surf_DrawTexturedRect((w - close_button_h) * 0.5, frame_close_button_margin, close_button_h, close_button_h)
 	end
 	
+	local test = vgui.Create("DPanel")
+	
 	--[[create the icons as buttons --disabled because of render order ;-; --probably could be fixed by making the draggable area it's own panel
 	for skill, data in pairs(NZLS.skills) do
 		local icon_x, icon_y = x_final + data.X, y_final + data.Y
@@ -352,7 +358,7 @@ end
 concommand.Add("nz_ls_gui", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
 concommand.Add("nz_ls_gui_info", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to view information about your progress.")
 concommand.Add("nz_ls_gui_skills", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
-concommand.Add("nz_ls_gui_settings", function() setup_menu() open_skills_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
+concommand.Add("nz_ls_gui_settings", function() setup_menu() open_settings_menu() end, _, "Opens the GUI to purchase and upgrade skills.")
 
 hook.Add("OnScreenSizeChanged", "nz_ls_gui_screen_res_changed_hook", function() calc_vars() end)
 

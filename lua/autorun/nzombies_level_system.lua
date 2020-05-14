@@ -4,14 +4,19 @@ AddCSLuaFile()
 
 if SERVER then
 	resource.AddSingleFile("materials/gui/nzombies_level_system/background.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/circle.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/progress_bar.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/progress_bar_composite.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/agility.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/leap.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/relief.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/wip.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/zombie_resistance.png")
 	
+	resource.AddSingleFile("sound/nzombies_level_system/gui/bleep.wav")
 	resource.AddSingleFile("sound/nzombies_level_system/gui/prestiege.wav")
 	resource.AddSingleFile("sound/nzombies_level_system/gui/skill_upgrade.wav")
+	resource.AddSingleFile("sound/nzombies_level_system/gui/warp.wav")
 	resource.AddSingleFile("sound/nzombies_level_system/gui/wip.wav")
 end
 
