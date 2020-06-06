@@ -18,7 +18,7 @@ function ulx.nzlsaddlevels(ply, targets, levels)
 		target:NZLSSetExperience(levels)
 	end
 	
-	ulx.fancyLogAdmin(ply, true, "#A gave #T " .. levels .. " experience.", targets)
+	ulx.fancyLogAdmin(ply, true, "#A gave #T " .. levels .. " levels.", targets)
 end
 
 function ulx.nzlsaddpoints(ply, targets, amount, prestiege)

@@ -1,6 +1,7 @@
 print("Core loaded (server realm)")
 
 AddCSLuaFile("fn_core.lua")
+AddCSLuaFile("fn_font.lua")
 util.AddNetworkString("nzls_data")
 
 --fn_ functions
@@ -242,6 +243,21 @@ local function load_sql(ply)
 	end
 end
 
+local function merge_update_data(ply)
+	--TODO optimize this so it only sends changed data, then merge the changed data on client
+	--we probably won't ever have enough data to warrant compression but we might as well since it is a lot of information
+	local data = table.Copy(ply_data[ply:UserID()])
+	data.experience = nil --we don't need to send exp, it's already networked
+	
+	local compressed = util.Compress(util.TableToJSON(data))
+	local length = compressed:len()
+	
+	net.Start("nzls_data")
+	net.WriteUInt(length, 32)
+	net.WriteData(compressed, length)
+	net.Send(ply)
+end
+
 local function save_data_skills(ply, path)
 	--save only the skills
 	file.Write(path .. "skills.json", util.TableToJSON(get_skills(ply), true))
@@ -263,21 +279,29 @@ end
 local function set_points(ply, amount)
 	--sets the total amount of skill points they have been given
 	ply_data[ply:UserID()].points = amount
+	
+	merge_update_data(ply)
 end
 
 local function set_points_eaten(ply, amount)
 	--sets how many skill points they have spent
 	ply_data[ply:UserID()].points_used = amount
+	
+	merge_update_data(ply)
 end
 
 local function set_points_prestiege(ply, amount)
 	--sets the total amount of skill points they have been given
 	ply_data[ply:UserID()].points_prestiege = amount
+	
+	merge_update_data(ply)
 end
 
 local function set_points_prestiege_eaten(ply, amount)
 	--sets how many skill points they have spent
 	ply_data[ply:UserID()].points_prestiege_used = amount
+	
+	merge_update_data(ply)
 end
 
 local function set_skill_level(ply, skill_name, level)
@@ -301,6 +325,8 @@ local function set_skill_level(ply, skill_name, level)
 		if skill.OnLevelChangedPost then skill.OnLevelChangedPost(ply, old_level, level) end
 		
 		ply_data[ply:UserID()].skills[skill_name] = ply_skill
+		
+		merge_update_data(ply)
 	end
 end
 
@@ -323,21 +349,9 @@ local function set_skill_level_prestiege(ply, skill_name, level)
 		if skill.OnLevelPrestiegeChangedPost then skill.OnLevelPrestiegeChangedPost(ply, old_level, level) end
 		
 		ply_data[ply:UserID()].skills[skill_name] = ply_skill
+		
+		merge_update_data(ply)
 	end
-end
-
-local function update_data(ply)
-	--we probably won't ever have enough data to warrant compression but we might as well since it is a lot of information
-	local data = table.Copy(ply_data[ply:UserID()])
-	data.experience = nil --we don't need to send exp, it's already networked
-	
-	local compressed = util.Compress(util.TableToJSON(data))
-	local length = compressed:len()
-	
-	net.Start("nzls_data")
-	net.WriteUInt(length, 32)
-	net.WriteData(compressed, length)
-	net.Send(ply)
 end
 
 local function whole_save_data(ply)
@@ -492,7 +506,7 @@ function ply_meta:NZLSResetData()
 	
 	check(self)
 	load_function(self) --load their info from the saved files/db
-	update_data(self) --send the client their data
+	merge_update_data(self) --send the client their data
 end
 
 --commands
@@ -502,12 +516,12 @@ concommand.Add("nz_ls_debug_pd", function(ply, cmd, args)
 	local skill_name = args[1]
 	
 	PrintTable(ply_data[ply:UserID()], 1)
-end, _, "Provides information about the player data.")
+end, nil, "Provides information about the player data.")
 
 concommand.Add("nz_ls_update_data", function(ply, cmd, args)
 	--
-	if ply then update_data(ply) end
-end, _, "Requests the server to send information about the player.")
+	if ply then merge_update_data(ply) end
+end, nil, "Requests the server to send information about the player.")
 
 concommand.Add("nz_ls_purchase", function(ply, cmd, args)
 	if not IsValid(ply) then return end
@@ -522,21 +536,22 @@ concommand.Add("nz_ls_purchase", function(ply, cmd, args)
 		local max_level_prestiege = data.MaxLevelPrestige
 		
 		if current_level < max_level then
-			local cost = data.Cost(current_level + 1)
+			local cost = math.floor(data.Cost(current_level + 1))
 			
-			if get_points_left >= cost then
-				
-			else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] You need atleast " .. cost .. " points to upgrade this skill to the next level.") end
+			if get_points_left(ply) >= cost then
+				set_points_eaten(ply, get_points_eaten(ply) + cost)
+				set_skill_level(ply, skill_name, get_skill_level(ply, skill_name) + 1)
+			else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] You need at least " .. cost .. " points to upgrade this skill to the next level.") end
 		elseif max_level_prestiege and current_level_prestiege < max_level_prestiege - max_level then
-			local cost = data.Cost(current_level_prestiege + 1)
+			local cost = math.floor(data.Cost(current_level_prestiege + 1))
 			
-			if get_points_prestiege_left >= cost then
-				--yeah
-				
-			else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] You need atleast " .. cost .. " prestiege points to upgrade this skill to the next level.") end
+			if get_points_prestiege_left(ply) >= cost then
+				set_points_prestiege_eaten(ply, get_points_prestiege_eaten(ply) + cost)
+				set_skill_level_prestiege(ply, skill_name, get_skill_level_prestiege(ply, skill_name) + 1)
+			else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] You need at least " .. cost .. " prestiege points to upgrade this skill to the next level.") end
 		else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] Skill is at max level and cannot be upgraded further.") end
 	else ply:PrintMessage(HUD_PRINTCONSOLE, "[nZLS] Skill does not exist with name " .. (skill_name or "nil")) end
-end, _, "Purchase the specified skill.")
+end, nil, "Purchase the specified skill.")
 
 concommand.Add("nz_ls_test1", function(ply, cmd, args)
 	if ply then
@@ -555,39 +570,28 @@ cvars.AddChangeCallback("nz_ls_save_sql", function(name, old, new)
 	save_function = sql_mode and whole_save_sql or whole_save_data
 end)
 
-hook.Add("InitPostEntity", "nz_level_system_entity_init_hook", function()
-	--
-	if sql_mode then create_db() end
-end)
-
 --hooks
-hook.Add("PlayerDisconnected", "nz_level_system_disconnect_hook", function(ply)
-	--
+hook.Add("InitPostEntity", "nzlevel_system_entity_init_hook", function() if sql_mode then create_db() end end)
+
+hook.Add("PlayerDisconnected", "nzls_disconnect_hook", function(ply)
 	save_function(ply)
 	
 	ply:NZLSRemoveData()
 end)
 
-hook.Add("PlayerFullLoad", "nz_level_system_full_load_hook", function(ply)
-	--custom hook
-	ply:NZLSResetData()
-end)
-
-hook.Add("PlayerInitialSpawn", "nz_level_system_ply_init_hook", function(ply)
+hook.Add("PlayerInitialSpawn", "nzls_ply_init_hook", function(ply)
 	--we can't send net messages through PlayerInitialSpawn hook, as the message doesn't always reach the client
-	--so we create a new hook named PlayerFullLoad
 	hook.Add("SetupMove", ply, function(self, ply, _, cmd)
 		--and yes, we are using the player as the identifier
 		if self == ply and not cmd:IsForced() then
-			hook.Run("PlayerFullLoad", self)
+			ply:NZLSResetData()
+			
 			hook.Remove("SetupMove", self)
 		end
 	end)
 end)
 
-hook.Add("Think", "nz_level_system_think_hook", function()
-	--TODO use a bitwise system to determine what networked value needs updating
-	--re-evaluate wether this ^ is necessary
+hook.Add("Think", "nzls_think_hook", function()
 	if check_exp then
 		for user_id, needs_check in pairs(check_exp_list) do
 			local ply = Player(user_id)

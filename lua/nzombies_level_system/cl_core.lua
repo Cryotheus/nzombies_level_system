@@ -1,9 +1,9 @@
 print("Core loaded (client realm)")
 
 local calc_exp, calc_level = include("fn_core.lua")
+local register_font = include("fn_font.lua")
 
 --locals
-local bar_scale = 1
 local bubbles = {}
 local current_level = 0
 local exp = 0
@@ -39,6 +39,7 @@ local tau = pi * 2
 	local bar_w
 	local bar_x
 	local bar_y
+	local bubble_bg_thickness
 	local bubble_max_delay = 0.01
 	local bubble_max_time = 3.0
 	local bubble_max_size
@@ -61,9 +62,11 @@ local color_blood = Color(255, 7, 7)
 local color_blood_bg = Color(128, 32, 32)
 
 --convar defs
-local nz_ls_progress_bar_low_perf = CreateClientConVar("nz_ls_progress_bar_low_perf", "0", true, "Should the nZ LS progress bar be in low performance mode.")
+local nz_ls_progress_bar_low_perf = CreateClientConVar("nz_ls_progress_bar_low_perf", "0", true, false, "Should the nZ LS progress bar be in low performance mode.", 0, 1)
+local nz_ls_progress_bar_scale = CreateClientConVar("nz_ls_progress_bar_scale", "1", true, false, "Should the nZ LS progress bar be in low performance mode.", 0.1, 10)
 
 --convar values
+local bar_scale = nz_ls_progress_bar_scale:GetFloat()
 local hud_high = not nz_ls_progress_bar_low_perf:GetBool()
 
 --caching for quicker access
@@ -92,11 +95,8 @@ local hud_high = not nz_ls_progress_bar_low_perf:GetBool()
 	local fl_surface_SetMaterial_White = draw.NoTexture
 
 --globals
---I have a table for this specific font I use in my progress bar addon. This will keep me from making duplicate fonts
---I may make the functions themself global, but for now I'll have it like this
-CryotheumDynamicFontData = CryotheumDynamicFontData or {}
-NZLSData = {}
-NZLSSkillVisibility = {}
+NZLSData = NZLSData or {}
+NZLSSkillVisibility = NZLSSkillVisibility or {}
 
 --local functions
 local function calc_bubble_size(cur_time, start_time, life_time, size) return fl_math_sin((cur_time - start_time) / life_time * tau) * size end
@@ -116,7 +116,7 @@ local function calc_vars()
 	bar_y = scr_h - bar_h - bar_magin_y
 	
 	bar_level_text_x = scr_w * 0.5 --bar_x + bar_w * 0.5 --basically just 
-	bar_level_text_y = bar_y + bar_h * 0.5
+	bar_level_text_y = bar_y + bar_h * 0.5 - bar_scale
 	
 	--high quality bar
 	bar_high_bg_c = math.floor(21 * bar_scale * 0.5)
@@ -132,46 +132,17 @@ local function calc_vars()
 	
 	local bubble_size = scr_min * 0.015 * bar_scale
 	
+	bubble_bg_thickness = 6 * bar_scale
 	bubble_max_size = bubble_size * 1.2
 	bubble_max_x = bar_high_bg_x + bar_high_bg_w
 	bubble_max_y = bar_high_bg_y + bar_high_bg_h
 	bubble_min_size = bubble_size * 0.8
 	bubble_min_x = bar_high_bg_x
 	bubble_min_y = bar_high_bg_y
-	bubble_speed = scr_min * 0.0025 * bar_scale
+	bubble_speed = scr_min * 0.0025 * 1
 end
 
-local function create_font(size, weight)
-	surface.CreateFont("pbgenfont" .. size .. "." .. weight, {
-		font = "DK Umbilical Noose",
-		size = size,
-		weight = weight,
-		antialias = true,
-	})
-end
-
-local function register_font(size, weight)
-	if CryotheumDynamicFontData[size] then
-		if CryotheumDynamicFontData[size][weight] then return
-		else
-			CryotheumDynamicFontData[size][weight] = true
-			
-			create_font(size, weight)
-		end
-	else
-		CryotheumDynamicFontData[size] = {[weight] = true}
-		
-		create_font(size, weight)
-	end
-end
-
-local function set_font(size, weight)
-	bar_level_text_font = "pbgenfont" .. size .. "." .. weight
-	
-	register_font(size, weight)
-end
-
-local function spawn_bubble()-- 2 - 1 = 1 and -1
+local function spawn_bubble()
 	if gui.IsGameUIVisible() then
 		bubbles = {}
 		
@@ -202,7 +173,7 @@ end
 
 --post function set up
 calc_vars()
-set_font(16 * bar_scale, 150)
+bar_level_text_font = register_font(16 * bar_scale, 150)
 
 --hook functions
 local function draw_hud_bubbles()
@@ -228,7 +199,7 @@ local function draw_hud_bubbles_bg()
 		
 		if size > -6 then
 			local diff_time = cur_time - bubble.time
-			local size_bg = size + 6
+			local size_bg = size + bubble_bg_thickness
 			local size_half = size * 0.5
 			local size_half_bg = size_bg * 0.5
 			
@@ -320,6 +291,13 @@ cvars.AddChangeCallback("nz_ls_progress_bar_low_perf", function()
 	else bubbles = {} end
 end)
 
+cvars.AddChangeCallback("nz_ls_progress_bar_scale", function()
+	bar_scale = nz_ls_progress_bar_scale:GetFloat()
+	
+	calc_vars()
+	register_font(16 * bar_scale, 150)
+end)
+
 --hooks
 hook.Add("HUDPaint", "nzls_hud_paint_hook", function()
 	draw_hud_pre()
@@ -367,45 +345,44 @@ end)
 net.Receive("nzls_data", function(size, ply)
 	local length = net.ReadUInt(32)
 	local ply_bit_data = net.ReadData(length)
-	local ply_data = util.Decompress(ply_bit_data)
 	
-	print("Receieved a player data update with a summed length of " .. size .. " and a data length of " .. length .. ".")
+	print("Receieved a player data update with a summed length of " .. math.ceil(size / 8) .. " and a data length of " .. length .. ".")
 	
-	NZLSData = util.JSONToTable(ply_data)
+	NZLSData = util.JSONToTable(util.Decompress(ply_bit_data))
 	NZLSSkillVisibility = {}
-	
-	--move to cl_menu
-	
+	--also change
 	local ply_skills = NZLSData.skills
-	local points = NZLSData.points
 	
 	for skill, skill_data in pairs(NZLS.skills) do
 		local ply_skill = ply_skills[skill]
 		
 		if ply_skill then
-			print("skill data for skill", ply_skill)
-			PrintTable(ply_skills[skill], 1)
-			
-			NZLSSkillVisibility[skill] = 2
+			if (ply_skill.level or 0) >= skill_data.MaxLevel then
+				if not skill_data.MaxLevelPrestige or (ply_skill.level_prestiege or 0) >= skill_data.MaxLevelPrestige then NZLSSkillVisibility[skill] = 4
+				else NZLSSkillVisibility[skill] = 3 end
+			else NZLSSkillVisibility[skill] = 2 end
 		else
-			--[[
 			local requirements = skill_data.Requirements
-			local requirements_met = true
 			
 			if requirements.Skills then
-				for skill_name, level in pairs(requirements.Skills) do
-					local skill_data = ply_skills[skill_name] and ply_skills[skill_name].level or 0
+				for skill_name, level_required in pairs(requirements.Skills) do
+					local ply_skill_level = ply_skills[skill_name] and ply_skills[skill_name].level or 0
 					
-					if skill_data >= level then continue end
-					
-					print("Did not meet " .. skill_name .. " skill level requirement of " .. skill_data .. " for skill " .. skill .. ".")
-					
-					requirements_met = false
-					
-					break
+					if ply_skill_level < level_required then goto requirements_failed end
 				end
 			end
-			]]
+			
+			if requirements.Level and current_level < requirements.Level then goto requirements_failed end
+			
+			NZLSSkillVisibility[skill] = 1
 		end
+		
+		--forbidden lua, don't use this unless all other statements are incapable
+		::requirements_failed::
+		
+		print("set visibility for skill " .. skill .. " to " .. (NZLSSkillVisibility[skill] or 0) .. ".")
 	end
+	
+	--update an open skill menu
+	if NZLSUpdateSkillMenu then NZLSUpdateSkillMenu() end
 end)

@@ -1,10 +1,11 @@
 --This is mainly just the loader
 
-AddCSLuaFile()
-
 if SERVER then
+	AddCSLuaFile()
+	
 	resource.AddSingleFile("materials/gui/nzombies_level_system/background.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/circle.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/circle_256.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/progress_bar.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/progress_bar_composite.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/agility.png")
@@ -12,6 +13,7 @@ if SERVER then
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/relief.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/wip.png")
 	resource.AddSingleFile("materials/gui/nzombies_level_system/skillicons/zombie_resistance.png")
+	resource.AddSingleFile("materials/gui/nzombies_level_system/skin.png")
 	
 	resource.AddSingleFile("sound/nzombies_level_system/gui/bleep.wav")
 	resource.AddSingleFile("sound/nzombies_level_system/gui/prestiege.wav")
@@ -48,6 +50,7 @@ local function load_script(script_path)
 		check_script_flag(script_path, "cl_") and 1 or 0,
 		check_script_flag(script_path, "sh_") and 2 or 0,
 		check_script_flag(script_path, "sv_") and 4 or 0)
+	--fn_ is handled by other scripts, and should never be loaded here
 	
 	if SERVER then
 		if bit.band(bits, 3) ~= 0 then AddCSLuaFile(script_path) end
